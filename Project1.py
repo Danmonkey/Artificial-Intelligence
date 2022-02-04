@@ -14,8 +14,9 @@ class State:
     State: A class that represents a State's collected data as a whole. A variety of parameters are included,
     each of which individually represents a specific data point. Contains a getter and setter for each parameter:
     Name, Capitol, Region, # of US House Seats, Population, # of Covid Cases, # of Covid deaths, vaccination rate,
-    median household income, and violent crime rate. Also contains a greater than operator overload (for comparing by
-    name) and a Str overload for returning the object as a string representation.
+    median household income, and violent crime rate. Note that there are no setters for the tertiary values. This is
+    intentional, as they are predicated on other data. Also contains a greater than operator overload (for comparing
+    by name) and a Str overload for returning the object as a string representation.
     """
 
     def __init__(self, countries):
@@ -26,7 +27,7 @@ class State:
         self.pop = countries[4]
         self.ccases = countries[5]
         self.cdeaths = countries[6]
-        self.fvr = countries[7]
+        self.fvr = float(countries[7])/100
         self.mhi = countries[8]
         self.vcr = countries[9]
         self.caserate = float(self.ccases)/float(self.pop)*100000
@@ -93,13 +94,24 @@ class State:
     def set_vcr(self, name):
         self.name = name
 
+    def get_caserate(self):
+        return self.caserate
+
+    def get_deathrate(self):
+        return self.deathrate
+
+    def get_cfr(self):
+        return self.cfr
+
     def widereport(self):
-        print(f'{self.name:20}{self.mhi:10}{self.vcr:10.2}{round(self.cfr, 7):<.7}{self.caserate:^25.2f}{self.deathrate:13.2f}{self.fvr:>12}')
+        print("%-15s %-9d %-8.2f %-15.6f %-15.2f %-12.2f %5.3f" % (self.name, int(self.mhi), float(self.vcr), float(self.cfr), float(self.caserate), float(self.deathrate), float(self.fvr)))
 
     def __gt__(self, other):
+        """Comparator overload for State objects."""
         return self.get_name() > other.get_name()
 
     def __str__(self):
+        """Str overload that returns some data about the object in a string format."""
         return f'{self.name:15}    {self.cap:20}    {self.reg:20}    {self.seats:15}    {self.pop:10}    {self.ccases:10}    {self.cdeaths:10}    {self.fvr:5}    {self.mhi:5}    {self.vcr:5}'
 
 
@@ -120,13 +132,44 @@ def sortbyname(countries, low, high):
 
 
 def sortbycfr(countries):
-    pass
+    """
+    Sortbycfr is implements an ascending mergesort by covid fatality rating.
+    :param countries: The State List to be sorted.
+    :return: Nothing, as the result is placed directly into the originating List.
+    """
+    if len(countries) > 1:
+        mid = len(countries)//2
+        low = countries[:mid]
+        high = countries[mid:]
+        sortbycfr(high)
+        sortbycfr(low)
+
+        i = j = k = 0
+        down = len(low)
+        up = len(high)
+
+        while i < down and j < up:
+            if low[i].get_cfr() < high[j].get_cfr():
+                countries[k] = low[i]
+                i += 1
+            else:
+                countries[k] = high[j]
+                j += 1
+            k += 1
+        while i < down:
+            countries[k] = low[i]
+            i += 1
+            k += 1
+        while j < up:
+            countries[k] = high[j]
+            j += 1
+            k += 1
 
 
 def partition(countries, low, high):
     """
-    Partition sub-function for Quicksort. I copied this from my Data Structures project for quicksort and modified it
-    :return Returns the partition point
+    Partition sub-function for Quicksort.
+    :return Returns the index of the partition point
     :type countries: List
     :param countries: List that contains the State objects
     :param low: the low value of the area to be partitioned
@@ -157,6 +200,7 @@ def searchforname(countries, target, inorder):
     :return: Returns the State object we're looking for, or None if we can't find it.
     """
     if inorder:
+        print("Binary searching for: " + target)
         high = len(countries) - 1
         low = 0
         mid = int((high / 2))
@@ -176,6 +220,7 @@ def searchforname(countries, target, inorder):
         else:
             return None
     else:
+        print("Sequentially searching for: " + target)
         for country in countries:
             if country.get_name() == target:
                 return country
@@ -188,9 +233,38 @@ def wideprint(countries):
     :param countries: A List containing State objects.
     :return: None, as it prints directly to the console.
     """
-    print(f'{"Name":20}{"MHI":10}{"VCR":10}{"CFR":13}{"Case Rate":^15}{"Death Rate":15}{"FVR"}')
+    print(f'{"Name":16}{"MHI":10}{"VCR":9}{"CFR":16}{"Case Rate":16}{"Death Rate":14}{"FVR"}')
+    print("--------------------------------------------------------------------------------------")
     for f in countries:
         f.widereport()
+
+
+def sequentialprint(country):
+    """Prints a single State object's information in a sequential format.
+    :param country: The State object in question
+    :return No return, as it prints directly to the console.
+    """
+    if country is None:
+        print("Couldn't find that State.")
+        return
+    print("Found State:")
+    print("Name: %-15s" % (country.get_name()))
+    print("MHI: %-7d" % (int(country.get_mhi())))
+    print("VCR: %-7.1f" % (float(country.get_vcr())))
+    print("CFR: %-10.6f" % (float(country.get_cfr())))
+    print("Case Rate: %-10.2f" % (float(country.get_caserate())))
+    print("Death Rate: %-10.2f" % (float(country.get_deathrate())))
+    print("FV Rate: %-5.3f" % (float(country.get_fvr())))
+
+
+def menu():
+    print("Please choose one of the following options:")
+    print("1) Print out a report of all the states.")
+    print("2) Sort the states ascending by name.")
+    print("3) Sort the states ascending by case fatality rate.")
+    print("4) Find a given state and print it's information.")
+    print("5) View the Spearman's Rho matrix.")
+    print("6) Exit the program.")
 
 
 reader = open("States.csv", "r")
@@ -199,5 +273,30 @@ Countries = []
 for x in reader:
     Countries.append(State(x.split(",")))
 issorted = False
-sortbyname(Countries, 0, len(Countries)-1)
-wideprint(Countries)
+catcher = 0
+while catcher == 0:
+    menu()
+    inp = input()
+    try:
+        inp = int(inp)
+    except ValueError:
+        print("That was not an integer!")
+    if inp == 1:
+        wideprint(Countries)
+    elif inp == 2:
+        sortbyname(Countries, 0, len(Countries)-1)
+        issorted = True
+    elif inp == 3:
+        sortbycfr(Countries)
+        issorted = False
+    elif inp == 4:
+        searcher = input("Please input the state name to look for.")
+        sequentialprint(searchforname(Countries, searcher, issorted))
+    elif inp == 5:
+        print("Printing the Rho matrix...")
+    elif inp == 6:
+        catcher = 1
+        print("Goodbye.")
+    else:
+        print(inp + " is not a valid choice! Please choose again")
+reader.close()
